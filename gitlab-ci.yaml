@@ -1,0 +1,118 @@
+# Spécification du type d'image Docker à utiliser dans le pipeline
+image: docker:latest
+
+# Utilisation du service Docker-in-Docker pour exécuter des conteneurs Docker dans le pipeline,
+# permettant un environnement d'exécution isolé pour les jobs CI et un contrôle total sur les opérations Docker
+services:
+  - docker:dind
+
+# Variables globales pour le pipeline
+variables:
+  # Suffixe utilisé pour l'image Docker lors de l'analyse de sécurité statique, conformément aux normes FIPS
+  SAST_IMAGE_SUFFIX: "-fips"
+  # Nom de l'image Docker utilisée dans le projet
+  IMAGE_NAME: fatimaalzahra0412/customer-service
+  # Tag de l'image Docker
+  IMAGE_TAG: 1.0.0
+
+# Définition des différentes étapes du pipeline
+stages:
+  - build
+  - security
+
+# Inclusion de templates pour des tâches de sécurité et de qualité de code
+include:
+  - template: Security/Dependency-Scanning.gitlab-ci.yml
+  - template: Security/License-Scanning.gitlab-ci.yml
+  - template: Security/SAST.gitlab-ci.yml
+  - template: Security/Secret-Detection.gitlab-ci.yml
+  - template: Security/Container-Scanning-gitlab-c1.yml
+  - template: Code-Quality-gitlab-ci.yml
+
+# Étape de construction de l'image Docker
+image-build:
+  stage: build
+  before_script:
+    - docker login -u $DOCKER_USER -p $DOCKER_PASSWORD # Connexion à Docker Hub pour pousser l'image
+  script:
+    - docker build -t $IMAGE_NAME:$IMAGE_TAG . # Construction de l'image Docker
+  after_script:
+    - docker push $IMAGE_NAME:$IMAGE_TAG # Pousser l'image vers Docker Hub
+
+# Étape d'analyse de sécurité des conteneurs Docker
+container_scanning:
+  stage: security
+  variables:
+    # Activation d'une sortie détaillée pour l'analyseur
+    SECURE_LOG_LEVEL: "debug"
+    # Image Docker à analyser
+    CS_IMAGE: $IMAGE_NAME:$IMAGE_TAG
+    # Utilisation de la stratégie "fetch" pour récupérer le code du projet
+    GIT_STRATEGY: "fetch"
+  dependencies:
+    - image-build
+  artifacts:
+    paths:
+      - gl-container-scanning-report.json # Fichier de rapport d'analyse des conteneurs
+    rules:
+      - exists:
+          - Dockerfile
+# Spécification du type d'image Docker à utiliser dans le pipeline
+image: docker:latest
+
+# Utilisation du service Docker-in-Docker pour exécuter des conteneurs Docker dans le pipeline,
+# permettant un environnement d'exécution isolé pour les jobs CI et un contrôle total sur les opérations Docker
+services:
+  - docker:dind
+
+# Variables globales pour le pipeline
+variables:
+  # Suffixe utilisé pour l'image Docker lors de l'analyse de sécurité statique, conformément aux normes FIPS
+  SAST_IMAGE_SUFFIX: "-fips"
+  # Nom de l'image Docker utilisée dans le projet
+  IMAGE_NAME: fatimaalzahra0412/customer-service
+  # Tag de l'image Docker
+  IMAGE_TAG: 1.0.0
+
+# Définition des différentes étapes du pipeline
+stages:
+  - build
+  - security
+
+# Inclusion de templates pour des tâches de sécurité et de qualité de code
+include:
+  - template: Security/Dependency-Scanning.gitlab-ci.yml
+  - template: Security/License-Scanning.gitlab-ci.yml
+  - template: Security/SAST.gitlab-ci.yml
+  - template: Security/Secret-Detection.gitlab-ci.yml
+  - template: Security/Container-Scanning-gitlab-c1.yml
+  - template: Code-Quality-gitlab-ci.yml
+
+# Étape de construction de l'image Docker
+image-build:
+  stage: build
+  before_script:
+    - docker login -u $DOCKER_USER -p $DOCKER_PASSWORD # Connexion à Docker Hub pour pousser l'image
+  script:
+    - docker build -t $IMAGE_NAME:$IMAGE_TAG . # Construction de l'image Docker
+  after_script:
+    - docker push $IMAGE_NAME:$IMAGE_TAG # Pousser l'image vers Docker Hub
+
+# Étape d'analyse de sécurité des conteneurs Docker
+container_scanning:
+  stage: security
+  variables:
+    # Activation d'une sortie détaillée pour l'analyseur
+    SECURE_LOG_LEVEL: "debug"
+    # Image Docker à analyser
+    CS_IMAGE: $IMAGE_NAME:$IMAGE_TAG
+    # Utilisation de la stratégie "fetch" pour récupérer le code du projet
+    GIT_STRATEGY: "fetch"
+  dependencies:
+    - image-build
+  artifacts:
+    paths:
+      - gl-container-scanning-report.json # Fichier de rapport d'analyse des conteneurs
+    rules:
+      - exists:
+          - Dockerfile
